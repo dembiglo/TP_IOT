@@ -1,6 +1,6 @@
 -- =============================
 -- QUESTION 2 : Suppression des tables
--- =============================
+
 
 -- Supprimer la table Mesure si elle existe
 DROP TABLE IF EXISTS Mesure;
