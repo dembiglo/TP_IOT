@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}Consommation{% endblock %}
+
+{% block content %}
+<h1>Page Consommation</h1>
+
+<!-- Sélecteur d'échelle de temps -->
+<div class="mb-3">
+    <label for="timeScale">Choisissez une échelle de temps :</label>
+    <select id="timeScale" class="form-select" onchange="updateChart()">
+        <option value="day">Par jour</option>
+        <option value="week">Par semaine</option>
+        <option value="month">Par mois</option>
+    </select>
+</div>
+
+<!-- Conteneur pour le graphique -->
+<div style="max-width: 800px; margin: 0 auto;">
+    <canvas id="consumptionChart" width="600" height="400"></canvas>
+</div>
+
+<script>
+    let chart; // Variable pour stocker le graphique
+
+    // Fonction pour regrouper les données par clé
+    function groupBy(data, key) {
+        return data.reduce((result, item) => {
+            const group = item[key];
+            if (!result[group]) {
+                result[group] = [];
+            }
+            result[group].push(item);
+            return result;
+        }, {});
+    }
+
+    // Fonction pour mettre à jour le graphique
+    function updateChart() {
+        const timeScale = document.getElementById('timeScale').value; // Récupère l'échelle choisie
+        fetch('http://127.0.0.1:8000/api/Facture') // Appelle l'API pour récupérer les données
+            .then(response => response.json())
+            .then(data => {
+                // Grouper les factures par type
+                const groupedData = groupBy(data, "type_facture");
+
+                // Préparer les données pour le graphique
+                const labels = Object.keys(groupedData); // Les types (électricité, eau, etc.)
+                const values = Object.values(groupedData).map(group =>
+                    group.reduce((sum, facture) => sum + facture.valeur_consommee, 0)
+                );
+
+                // Si un graphique existe déjà, on le détruit avant d'en créer un nouveau
+                if (chart) {
+                    chart.destroy();
+                }
+
+                // Créer un nouveau graphique
+                const ctx = document.getElementById('consumptionChart').getContext('2d');
+                chart = new Chart(ctx, {
+                    type: 'bar', // Exemple avec un graphique en barres
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Consommation totale',
+                            data: values,
+                            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: false, // Désactiver le comportement responsive
+                        maintainAspectRatio: true, // Conserver l'aspect ratio fixe
+                        scales: {
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Type de factures'
+                                }
+                            },
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Valeur consommée'
+                                }
+                            }
+                        }
+                    }
+                });
+            })
+            .catch(error => console.error('Erreur lors de la récupération des données :', error));
+    }
+
+    // Charger le graphique au chargement de la page
+    document.addEventListener('DOMContentLoaded', updateChart);
+</script>
+
+<style>
+    canvas {
+        display: block;
+        margin: 20px auto;
+        width: 600px; /* Largeur fixe */
+        height: 400px; /* Hauteur fixe */
+    }
+</style>
+{% endblock %}

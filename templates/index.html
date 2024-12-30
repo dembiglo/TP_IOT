@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}Accueil{% endblock %}
+
+{% block content %}
+<!-- Bannière d'accueil -->
+<div class="bg-primary text-white text-center p-5 mb-4">
+    <h1 class="fw-bold">Bienvenue sur votre application </h1>
+    <p class="lead">Simplifiez votre gestion énergétique et environnementale</p>
+</div>
+
+<!-- Contenu principal avec des cartes -->
+<div class="row">
+    <div class="col-md-4">
+        <div class="card shadow-sm">
+            <div class="card-body text-center">
+                <h5 class="card-title fw-bold"><i class="fas fa-bolt"></i> Consommation</h5>
+                <p class="card-text">Suivez votre consommation d'énergie en temps réel.</p>
+                <a href="/consommation" class="btn btn-primary">Voir plus</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card shadow-sm">
+            <div class="card-body text-center">
+                <h5 class="card-title fw-bold"><i class="fas fa-cogs"></i> Capteurs</h5>
+                <p class="card-text">Gérez vos capteurs et actionneurs connectés.</p>
+                <a href="/capteurs" class="btn btn-primary">Voir plus</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card shadow-sm">
+            <div class="card-body text-center">
+                <h5 class="card-title fw-bold"><i class="fas fa-coins"></i> Économies</h5>
+                <p class="card-text">Comparez vos économies pour un impact environnemental réduit.</p>
+                <a href="/economies" class="btn btn-primary">Voir plus</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+

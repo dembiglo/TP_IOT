@@ -1,23 +1,31 @@
-import sqlite3, random
 
-# ouverture/initialisation de la base de donnee 
-conn = sqlite3.connect('mydb.db') #on cree une connexion
+import sqlite3
+import random
+
+# Initialisation de la base de données et création de la connexion
+conn = sqlite3.connect('mydb.db')  # Connexion à la base SQLite
 conn.row_factory = sqlite3.Row
-c = conn.cursor() #creer une connexion ( ce qui  nous permettra de communiquer avec la base de donnee a travers les requettes sql)
+c = conn.cursor()  # Permet d'exécuter des requêtes SQL
 
-id = random.randint(1,2)
-N = 10
-if id ==1:
-    L=[round(random.uniform(20,38),2) for x in range(N)] 
-elif id==2:
-    L=[random.randint(0,1) for x in range(N)]
+# Génération des mesures aléatoires
+id_capteur = random.randint(1, 2)  # Sélection aléatoire de l'ID du capteur
+N = 20  # Nombre d'échantillons à générer
 
-req1 ="INSERT INTO Mesure (valeur , id_capteur) VALUES (?,?)" # cette requette c'est pour les mesures
-for valeur in L:
-    c.execute(req1, (valeur, id))
-conn.commit() # permet d'envoyer la requette 
+if id_capteur== 1:
+    Mesures = [round(random.uniform(20.0, 50.0), 2) for _ in range(N)]
+else:
+    Mesures = [round(random.uniform(50.0, 100.0), 2) for _ in range(N)]
 
-liste_facture=[
+# Insertion des mesures dans la table "Mesure"
+insert_mesures = "INSERT INTO Mesure (valeur, id_capteur) VALUES (?, ?)"
+for valeur in Mesures:
+    c.execute(insert_mesures, (valeur, id_capteur))
+
+# Validation des modifications pour la table "Mesure"
+conn.commit()
+
+# Définition des types de factures possibles
+type_facture = [
     "Eau",
     "Electricité",
     "Loyer",
@@ -26,10 +34,22 @@ liste_facture=[
     "Assurance"
 ]
 
-req2 ="INSERT INTO Facture(Type_facture,montant, Valeur_consommee,id_logement) VALUES(?,?,?,?)"
-for x in range(N):
-    c.execute(req2,(random.choice(liste_facture),round(random.uniform(20,38),1), round(random.uniform(20,38),1),2)) # c'est les facture pour le logement 2
+# Génération et insertion des factures aléatoires
+insert_factures = """
+INSERT INTO Facture (Type_facture, montant, Valeur_consommee, id_logement) 
+VALUES (?, ?, ?, ?)
+"""
+for _ in range(N):
+    c.execute(
+        insert_factures,
+        (
+            random.choice(type_facture),  # Type de facture choisi aléatoirement
+            round(random.uniform(20.0, 200.0), 1),  # Montant aléatoire
+            round(random.uniform(50.0, 250.0), 1),  # Valeur consommée aléatoire
+            random.randint(1, 2)  # ID du logement associé
+        )
+    )
 
-# fermeture
-conn.commit() # permet d'envoyer la requette 
-conn.close() # on ferme la connexion
+# Validation des modifications pour la table "Facture" et fermeture de la connexion
+conn.commit()
+conn.close()

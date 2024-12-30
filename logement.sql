@@ -161,7 +161,7 @@ VALUES (48.5, 2); -- Humidité de 48.5%
 
 -- Factures associées au logement
 INSERT INTO Facture (type_facture, montant, valeur_consommee, id_logement)
-VALUES ('Électricité', 120.50, 350.0, 1);
+VALUES ('Electricité', 120.50, 350.0, 1);
 
 INSERT INTO Facture (type_facture, montant, valeur_consommee, id_logement)
 VALUES ('Eau',  50.25, 15.0, 1);
