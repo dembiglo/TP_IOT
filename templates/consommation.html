@@ -1,107 +1,166 @@
-{% extends "base.html" %}
-{% block title %}Consommation{% endblock %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consommation - Logement Éco-Responsable</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">Eco-Logement</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">Accueil</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/consommation">Consommation</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/capteurs">Capteurs/Actionneurs</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/economies">Economies</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/configuration">Configuration</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
 
-{% block content %}
-<h1>Page Consommation</h1>
+    <div class="container mt-5">
+        <h1 class="text-center">Consommation du logement</h1>
+        <p class="text-center">Suivez votre consommation d'eau, d'électricité et de services divers au fil du temps.</p>
 
-<!-- Sélecteur d'échelle de temps -->
-<div class="mb-3">
-    <label for="timeScale">Choisissez une échelle de temps :</label>
-    <select id="timeScale" class="form-select" onchange="updateChart()">
-        <option value="day">Par jour</option>
-        <option value="week">Par semaine</option>
-        <option value="month">Par mois</option>
-    </select>
-</div>
+        <div class="mb-4">
+            <label for="timeFilter" class="form-label">Filtrer par période :</label>
+            <select id="timeFilter" class="form-select">
+                <option value="day">Jour</option>
+                <option value="month" selected>Mois</option>
+                <option value="year">Année</option>
+            </select>
+        </div>
 
-<!-- Conteneur pour le graphique -->
-<div style="max-width: 800px; margin: 0 auto;">
-    <canvas id="consumptionChart" width="600" height="400"></canvas>
-</div>
+        <div class="row">
+            <div class="col-md-12">
+                <canvas id="consumptionChart" width="800" height="400"></canvas>
+            </div>
+        </div>
+    </div>
 
-<script>
-    let chart; // Variable pour stocker le graphique
+    <footer class="bg-dark text-white text-center py-3 mt-5">
+        <p>&copy; 2025 Logement Éco-Responsable - Tous droits réservés.</p>
+    </footer>
 
-    // Fonction pour regrouper les données par clé
-    function groupBy(data, key) {
-        return data.reduce((result, item) => {
-            const group = item[key];
-            if (!result[group]) {
-                result[group] = [];
-            }
-            result[group].push(item);
-            return result;
-        }, {});
-    }
+    <script>
+        const timeFilter = document.getElementById('timeFilter');
+        const consumptionChartElement = document.getElementById('consumptionChart');
+        let consumptionChart;
 
-    // Fonction pour mettre à jour le graphique
-    function updateChart() {
-        const timeScale = document.getElementById('timeScale').value; // Récupère l'échelle choisie
-        fetch('http://127.0.0.1:8000/api/Facture') // Appelle l'API pour récupérer les données
-            .then(response => response.json())
-            .then(data => {
-                // Grouper les factures par type
-                const groupedData = groupBy(data, "type_facture");
+        async function fetchFactures(period) {
+            try {
+                const response = await fetch(`/api/Facture`);
+                if (!response.ok) {
+                    throw new Error('Erreur lors de la récupération des données');
+                }
+                const factures = await response.json();
+
+                // Regrouper les factures par type et période
+                const groupedData = {};
+                factures.forEach(facture => {
+                    const date = new Date(facture.date_facture);
+                    let periodLabel;
+
+                    if (period === 'day') {
+                        periodLabel = date.toISOString().split('T')[0]; // Format YYYY-MM-DD
+                    } else if (period === 'month') {
+                        periodLabel = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                    } else if (period === 'year') {
+                        periodLabel = `${date.getFullYear()}`;
+                    }
+
+                    if (!groupedData[periodLabel]) {
+                        groupedData[periodLabel] = {};
+                    }
+
+                    if (!groupedData[periodLabel][facture.type_facture]) {
+                        groupedData[periodLabel][facture.type_facture] = 0;
+                    }
+
+                    groupedData[periodLabel][facture.type_facture] += facture.valeur_consommee;
+                });
 
                 // Préparer les données pour le graphique
-                const labels = Object.keys(groupedData); // Les types (électricité, eau, etc.)
-                const values = Object.values(groupedData).map(group =>
-                    group.reduce((sum, facture) => sum + facture.valeur_consommee, 0)
-                );
+                const labels = Object.keys(groupedData);
+                const datasets = [
+                    'Electricité', 'Eau', 'Déchets', 'Assurance', 'Internet', 'Gaz', 'Loyer'
+                ].map(type => {
+                    return {
+                        label: type,
+                        data: labels.map(label => groupedData[label][type] || 0),
+                        borderColor: getRandomColor(),
+                        backgroundColor: getRandomColor(0.2),
+                    };
+                });
 
-                // Si un graphique existe déjà, on le détruit avant d'en créer un nouveau
-                if (chart) {
-                    chart.destroy();
-                }
+                return { labels, datasets };
 
-                // Créer un nouveau graphique
-                const ctx = document.getElementById('consumptionChart').getContext('2d');
-                chart = new Chart(ctx, {
-                    type: 'bar', // Exemple avec un graphique en barres
-                    data: {
-                        labels: labels,
-                        datasets: [{
-                            label: 'Consommation totale',
-                            data: values,
-                            backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                            borderColor: 'rgba(75, 192, 192, 1)',
-                            borderWidth: 1
-                        }]
-                    },
-                    options: {
-                        responsive: false, // Désactiver le comportement responsive
-                        maintainAspectRatio: true, // Conserver l'aspect ratio fixe
-                        scales: {
-                            x: {
-                                title: {
-                                    display: true,
-                                    text: 'Type de factures'
-                                }
-                            },
-                            y: {
-                                beginAtZero: true,
-                                title: {
-                                    display: true,
-                                    text: 'Valeur consommée'
-                                }
-                            }
+            } catch (error) {
+                console.error('Erreur :', error);
+                return null;
+            }
+        }
+
+        function getRandomColor(alpha = 1) {
+            const r = Math.floor(Math.random() * 255);
+            const g = Math.floor(Math.random() * 255);
+            const b = Math.floor(Math.random() * 255);
+            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        }
+
+        function updateChart(data) {
+            if (!data) return;
+
+            if (consumptionChart) {
+                consumptionChart.destroy();
+            }
+
+            consumptionChart = new Chart(consumptionChartElement, {
+                type: 'line',
+                data: data,
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        title: {
+                            display: true,
+                            text: `Consommation des factures (${timeFilter.value})`
                         }
                     }
-                });
-            })
-            .catch(error => console.error('Erreur lors de la récupération des données :', error));
-    }
+                }
+            });
+        }
 
-    // Charger le graphique au chargement de la page
-    document.addEventListener('DOMContentLoaded', updateChart);
-</script>
+        async function updateConsumptionChart() {
+            const period = timeFilter.value;
+            const chartData = await fetchFactures(period);
+            updateChart(chartData);
+        }
 
-<style>
-    canvas {
-        display: block;
-        margin: 20px auto;
-        width: 600px; /* Largeur fixe */
-        height: 400px; /* Hauteur fixe */
-    }
-</style>
-{% endblock %}
+        timeFilter.addEventListener('change', updateConsumptionChart);
+
+        // Initial load
+        updateConsumptionChart();
+    </script>
+</body>
+</html>

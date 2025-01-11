@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configuration des Capteurs/Actionneurs</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">Eco-Logement</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">Accueil</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/consommation">Consommation</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/capteurs">Capteurs/Actionneurs</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/economies">Economies</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/configuration">Configuration</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-5">
+        <h1 class="text-center mb-4">Configuration des Capteurs/Actionneurs</h1>
+        <p class="text-center">Gérez vos capteurs/actionneurs : ajouter, modifier ou supprimer.</p>
+        
+        <!-- Tableau des capteurs -->
+        <div class="table-responsive">
+            <table class="table table-striped table-bordered">
+                <thead class="table-dark">
+                    <tr>
+                        <th>ID</th>
+                        <th>Type</th>
+                        <th>Référence</th>
+                        <th>Pièce</th>
+                        <th>Port de Communication</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Exemple de données -->
+                    <tr>
+                        <td>1</td>
+                        <td>1</td>
+                        <td>CapteurTemp123</td>
+                        <td>1</td>
+                        <td>Port1</td>
+                        <td>
+                            <button class="btn btn-warning btn-sm">Modifier</button>
+                            <button class="btn btn-danger btn-sm">Supprimer</button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>2</td>
+                        <td>3</td>
+                        <td>CapteurHum456</td>
+                        <td>4</td>
+                        <td>Port2</td>
+                        <td>
+                            <button class="btn btn-warning btn-sm">Modifier</button>
+                            <button class="btn btn-danger btn-sm">Supprimer</button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Formulaire d'ajout -->
+        <div class="card mt-5">
+            <div class="card-header bg-dark text-white">
+                Ajouter un Capteur/Actionneur
+            </div>
+            <div class="card-body">
+                <form>
+                    <div class="mb-3">
+                        <label for="type" class="form-label">Type :</label>
+                        <input type="text" id="type" class="form-control" placeholder="Type">
+                    </div>
+                    <div class="mb-3">
+                        <label for="reference" class="form-label">Référence :</label>
+                        <input type="text" id="reference" class="form-control" placeholder="Référence">
+                    </div>
+                    <div class="mb-3">
+                        <label for="piece" class="form-label">Pièce :</label>
+                        <input type="text" id="piece" class="form-control" placeholder="Pièce">
+                    </div>
+                    <div class="mb-3">
+                        <label for="port" class="form-label">Port de Communication :</label>
+                        <input type="text" id="port" class="form-control" placeholder="Port de Communication">
+                    </div>
+                    <button type="submit" class="btn btn-success">Ajouter</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <footer class="bg-dark text-white text-center py-3 mt-5">
+        <p>&copy; 2025 Logement Éco-Responsable - Tous droits réservés.</p>
+    </footer>
+</body>
+</html>

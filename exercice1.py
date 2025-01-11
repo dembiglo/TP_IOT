@@ -1,16 +1,82 @@
-from fastapi import FastAPI, HTTPException
+from datetime import datetime
+from multiprocessing.resource_tracker import getfd
+import random
+from fastapi import Depends, FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
-import requests
+from fastapi.templating import Jinja2Templates
+from fastapi.requests import Request
+from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import sqlite3
-from fastapi.middleware.cors import CORSMiddleware
+from datetime import datetime, timedelta
 
+
+
+from requests import Session
+
+# Créer l'application FastAPI
+app = FastAPI()
+
+# Monter le dossier static pour les fichiers CSS/JS
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+
+# Configurer les templates Jinja2
+from fastapi.templating import Jinja2Templates
+
+# Spécifiez le dossier "templates"
+templates= Jinja2Templates(directory="templates")
+
+from fastapi import FastAPI, Request
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 
 app = FastAPI()
 
-@app.get("/")
-def root():
-    return {"message": "Bienvenue dans l'API"}
+# Monter le dossier static
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+from fastapi import FastAPI, Request
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+
+app = FastAPI()
+
+# Monter les fichiers statiques
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# Configurer les templates
+templates = Jinja2Templates(directory="templates")
+
+@app.get("/", response_class=HTMLResponse)
+async def read_index(request: Request):
+    # Cette route sert la page d'accueil
+    return templates.TemplateResponse("index.html", {"request": request})
+
+@app.get("/consommation", response_class=HTMLResponse)
+async def read_consommation(request: Request):
+    # Cette route sert la page consommation
+    return templates.TemplateResponse("consommation.html", {"request": request})
+
+@app.get("/capteurs", response_class=HTMLResponse)
+async def get_capteurs_page(request: Request):
+    return templates.TemplateResponse("capteurs.html", {"request": request})
+
+@app.get("/configuration", response_class=HTMLResponse)
+async def configuration_page(request: Request):
+    """
+    Route pour afficher la page configuration.
+    """
+    return templates.TemplateResponse("configuration.html", {"request": request})
+
+@app.get("/economies", response_class=HTMLResponse)
+async def read_economies_page(request: Request):
+    return templates.TemplateResponse("economies.html", {"request": request})
+
+
 
 #Exercice 1 
 
@@ -30,6 +96,12 @@ class Facture(BaseModel):
     montant: float
     valeur_consommee: float
     id_logement: int
+
+class CapteurActionneur(BaseModel):
+    id_type: int
+    reference_commerciale: str
+    id_piece: int
+    port_communication: str
 
 # Route POST pour ajouter une mesure
 @app.post("/api/Mesure")
@@ -218,7 +290,6 @@ def get_weather(city: str = "Paris", country: str = "FR"):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erreur : {str(e)}")
-    
 
  
 app.add_middleware(
@@ -229,8 +300,176 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.get("/api/Capteurs")
+def get_all_capteurs():
+    from datetime import datetime, timedelta
+
+    now = datetime.now()
+    recent_threshold = now - timedelta(hours=24)  # Seuil : 24 heures
+
+    try:
+        conn = connect_db()
+        c = conn.cursor()
+
+        # Récupérer tous les capteurs
+        c.execute("SELECT * FROM Capteur_Actionneur")
+        capteurs = c.fetchall()
+
+        result = []
+        for capteur in capteurs:
+            capteur_id = capteur[0]  # Index de l'ID du capteur
+
+            # Requête pour les mesures récentes
+            c.execute(
+                """
+                SELECT COUNT(*) FROM Mesure
+                WHERE id_capteur = ? AND date_insertion >= ?
+                """,
+                (capteur_id, recent_threshold)
+            )
+            recent_measure_count = c.fetchone()[0]
+
+            # Journaux pour débogage
+            print(f"Capteur ID: {capteur_id}, Seuil: {recent_threshold}, Mesures récentes: {recent_measure_count}")
+
+            # Déterminer l'état du capteur
+            etat = "Actif" if recent_measure_count > 0 else "Inactif"
+
+            # Ajouter le capteur avec son état au résultat
+            result.append({
+                "id_capteur": capteur[0],
+                "id_type": capteur[1],
+                "reference_commerciale": capteur[2],
+                "id_piece": capteur[3],
+                "port_communication": capteur[4],
+                "date_insertion": capteur[5],
+                "etat": etat
+            })
+
+        return result
+
+    except sqlite3.Error as e:
+        print(f"Erreur SQLite : {e}")
+        raise HTTPException(status_code=500, detail=f"Erreur SQLite : {str(e)}")
+    except Exception as e:
+        print(f"Erreur générale : {e}")
+        raise HTTPException(status_code=500, detail=f"Erreur générale : {str(e)}")
+    finally:
+        if conn:
+            conn.close()
+
+
+
+
+@app.post("/api/Capteurs")
+def create_capteur(capteur: CapteurActionneur):
+    try:
+        conn = connect_db()
+        c = conn.cursor()
+        c.execute(
+            "INSERT INTO Capteur_Actionneur (id_type, reference_commerciale, id_piece, port_communication) VALUES (?, ?, ?, ?)",
+            (capteur.id_type, capteur.reference_commerciale, capteur.id_piece, capteur.port_communication)
+        )
+        conn.commit()
+        return {"message": "Capteur/Actionneur ajouté avec succès"}
+    except sqlite3.Error as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    finally:
+        if conn:
+            conn.close()
+
+@app.put("/api/Capteurs/{id}")
+def update_capteur(id: int, capteur: CapteurActionneur):
+    try:
+        conn = connect_db()
+        c = conn.cursor()
+        c.execute(
+            """
+            UPDATE Capteur_Actionneur 
+            SET id_type = ?, reference_commerciale = ?, id_piece = ?, port_communication = ?
+            WHERE id_capteur = ?
+            """,
+            (capteur.id_type, capteur.reference_commerciale, capteur.id_piece, capteur.port_communication, id)
+        )
+        conn.commit()
+        return {"message": "Capteur/Actionneur mis à jour avec succès"}
+    except sqlite3.Error as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    finally:
+        if conn:
+            conn.close()
+
+@app.delete("/api/Capteurs/{id}")
+def delete_capteur(id: int):
+    try:
+        conn = connect_db()
+        c = conn.cursor()
+        c.execute("DELETE FROM Capteur_Actionneur WHERE id_capteur = ?", (id,))
+        conn.commit()
+        return {"message": "Capteur/Actionneur supprimé avec succès"}
+    except sqlite3.Error as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    finally:
+        if conn:
+            conn.close()
+
+from sqlalchemy.orm import Session
+from fastapi import Depends
+
+from fastapi import Depends
+from sqlalchemy.orm import Session
+from sqlalchemy.sql import text
+from database import get_db
+
+
+@app.get("/api/Economies", response_model=list[dict])
+def get_economies(db: Session = Depends(get_db)):
+    """
+    Calcule les économies réalisées en comparant les montants des factures
+    actuelles avec les factures passées.
+    """
+
+    # Sélection des factures actuelles (derniers 30 jours)
+    factures_actuelles = db.execute(text("""
+        SELECT type_facture, SUM(montant) AS montant_actuel
+        FROM Facture
+        WHERE date_facture >= DATE('now', '-1 month') -- Factures actuelles (1 mois)
+        GROUP BY type_facture
+    """)).fetchall()
+
+    # Sélection des factures passées (avant 30 jours)
+    factures_passees = db.execute(text("""
+        SELECT type_facture, SUM(montant) AS montant_passe
+        FROM Facture
+        WHERE date_facture < DATE('now', '-1 month') -- Factures passées
+        GROUP BY type_facture
+    """)).fetchall()
+
+    # Conversion des résultats en dictionnaires pour faciliter le traitement
+    factures_actuelles_dict = {row['type_facture']: row['montant_actuel'] for row in factures_actuelles}
+    factures_passees_dict = {row['type_facture']: row['montant_passe'] for row in factures_passees}
+
+    # Calcul des économies
+    economies = []
+    for type_facture in set(factures_actuelles_dict.keys()).union(factures_passees_dict.keys()):
+        montant_actuel = factures_actuelles_dict.get(type_facture, 0)
+        montant_passe = factures_passees_dict.get(type_facture, 0)
+        economie = montant_passe - montant_actuel
+
+        economies.append({
+            "type_facture": type_facture,
+            "montant_actuel": montant_actuel,
+            "montant_passe": montant_passe,
+            "economie": economie
+        })
+
+    return economies
+
+
+
+
 
 # Point d'entrée pour lancer le serveur
-if __name__ == "__main__":
+if __name__ == "_main_":
     import uvicorn
     uvicorn.run("exercice1:app", host="127.0.0.1", port=8000, reload=True)

@@ -1,5 +1,47 @@
-.card:hover {
-    transform: scale(1.05); /* Agrandir légèrement la carte */
-    box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.2); /* Ajouter une ombre */
-    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f8f9fa;
+}
+
+footer {
+    background-color: #343a40;
+    color: white;
+    padding: 10px 0;
+    text-align: center;
+}
+
+.container {
+    margin-top: 20px;
+}
+
+select#timeFilter {
+    border-radius: 5px;
+    padding: 5px;
+    width: 200px;
+}
+
+.etat-actif {
+    color: green;
+    font-weight: bold;
+}
+
+.etat-inactif {
+    color: red;
+    font-weight: bold;
+}
+
+.table {
+    margin-top: 20px;
+    border-collapse: collapse;
+    width: 100%;
+}
+
+.table th, .table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+}
+
+.table th {
+    background-color: #f2f2f2;
+    text-align: left;
 }
