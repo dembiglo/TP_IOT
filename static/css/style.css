@@ -42,6 +42,16 @@ select#timeFilter {
 }
 
 .table th {
-    background-color: #f2f2f2;
-    text-align: left;
+    background-color: #343a40; /* Fond gris foncé opaque */
+    color: #ffffff; /* Texte blanc */
+    font-weight: bold; /* Texte en gras */
+    text-align: center; /* Centré */
+    padding: 10px; /* Espacement */
+    border: 1px solid #dee2e6; /* Bordure claire */
+    opacity: 1; /* Assure une opacité totale */
+}
+
+.table td {
+    text-align: right;
+    padding: 10px;
 }

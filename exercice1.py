@@ -1,19 +1,13 @@
-from datetime import datetime
-from multiprocessing.resource_tracker import getfd
-import random
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
-from fastapi.templating import Jinja2Templates
+from fastapi.templating import Jinja2Templates  # Configurer les templates Jinja2
+from fastapi import FastAPI, Request
 from fastapi.requests import Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import sqlite3
-from datetime import datetime, timedelta
 
-
-
-from requests import Session
 
 # Créer l'application FastAPI
 app = FastAPI()
@@ -21,60 +15,11 @@ app = FastAPI()
 # Monter le dossier static pour les fichiers CSS/JS
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-
-# Configurer les templates Jinja2
-from fastapi.templating import Jinja2Templates
-
 # Spécifiez le dossier "templates"
 templates= Jinja2Templates(directory="templates")
 
-from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse
-from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
-
-app = FastAPI()
-
-# Monter le dossier static
-app.mount("/static", StaticFiles(directory="static"), name="static")
-
-from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse
-from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
-
-app = FastAPI()
-
-# Monter les fichiers statiques
-app.mount("/static", StaticFiles(directory="static"), name="static")
-
 # Configurer les templates
 templates = Jinja2Templates(directory="templates")
-
-@app.get("/", response_class=HTMLResponse)
-async def read_index(request: Request):
-    # Cette route sert la page d'accueil
-    return templates.TemplateResponse("index.html", {"request": request})
-
-@app.get("/consommation", response_class=HTMLResponse)
-async def read_consommation(request: Request):
-    # Cette route sert la page consommation
-    return templates.TemplateResponse("consommation.html", {"request": request})
-
-@app.get("/capteurs", response_class=HTMLResponse)
-async def get_capteurs_page(request: Request):
-    return templates.TemplateResponse("capteurs.html", {"request": request})
-
-@app.get("/configuration", response_class=HTMLResponse)
-async def configuration_page(request: Request):
-    """
-    Route pour afficher la page configuration.
-    """
-    return templates.TemplateResponse("configuration.html", {"request": request})
-
-@app.get("/economies", response_class=HTMLResponse)
-async def read_economies_page(request: Request):
-    return templates.TemplateResponse("economies.html", {"request": request})
 
 
 
@@ -300,6 +245,34 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+#Application Web
+
+@app.get("/", response_class=HTMLResponse)
+async def read_index(request: Request):
+    # Cette route sert la page d'accueil
+    return templates.TemplateResponse("index.html", {"request": request})
+
+@app.get("/consommation", response_class=HTMLResponse)
+async def read_consommation(request: Request):
+    # Cette route sert la page consommation
+    return templates.TemplateResponse("consommation.html", {"request": request})
+
+@app.get("/capteurs", response_class=HTMLResponse)
+async def get_capteurs_page(request: Request):
+    return templates.TemplateResponse("capteurs.html", {"request": request})
+
+@app.get("/configuration", response_class=HTMLResponse)
+async def configuration_page(request: Request):
+    """
+    Route pour afficher la page configuration.
+    """
+    return templates.TemplateResponse("configuration.html", {"request": request})
+
+@app.get("/economies", response_class=HTMLResponse)
+async def read_economies_page(request: Request):
+    return templates.TemplateResponse("economies.html", {"request": request})
+
+
 @app.get("/api/Capteurs")
 def get_all_capteurs():
     from datetime import datetime, timedelta
@@ -413,57 +386,56 @@ def delete_capteur(id: int):
         if conn:
             conn.close()
 
-from sqlalchemy.orm import Session
-from fastapi import Depends
-
-from fastapi import Depends
-from sqlalchemy.orm import Session
-from sqlalchemy.sql import text
-from database import get_db
 
 
-@app.get("/api/Economies", response_model=list[dict])
-def get_economies(db: Session = Depends(get_db)):
+@app.get("/api/Economies")
+def get_economies():
     """
-    Calcule les économies réalisées en comparant les montants des factures
-    actuelles avec les factures passées.
+    Calcule les économies réalisées en comparant les montants des factures actuelles avec les montants passés.
     """
+    try:
+        conn = connect_db()
+        c = conn.cursor()
 
-    # Sélection des factures actuelles (derniers 30 jours)
-    factures_actuelles = db.execute(text("""
-        SELECT type_facture, SUM(montant) AS montant_actuel
-        FROM Facture
-        WHERE date_facture >= DATE('now', '-1 month') -- Factures actuelles (1 mois)
-        GROUP BY type_facture
-    """)).fetchall()
+        # Factures actuelles (dernier mois)
+        c.execute("""
+            SELECT type_facture, SUM(montant) AS montant_actuel
+            FROM Facture
+            WHERE date_facture >= DATE('now', '-1 month')
+            GROUP BY type_facture
+        """)
+        factures_actuelles = {row[0]: row[1] for row in c.fetchall()}
 
-    # Sélection des factures passées (avant 30 jours)
-    factures_passees = db.execute(text("""
-        SELECT type_facture, SUM(montant) AS montant_passe
-        FROM Facture
-        WHERE date_facture < DATE('now', '-1 month') -- Factures passées
-        GROUP BY type_facture
-    """)).fetchall()
+        # Factures passées (avant le dernier mois)
+        c.execute("""
+            SELECT type_facture, SUM(montant) AS montant_passe
+            FROM Facture
+            WHERE date_facture < DATE('now', '-1 month')
+            GROUP BY type_facture
+        """)
+        factures_passees = {row[0]: row[1] for row in c.fetchall()}
 
-    # Conversion des résultats en dictionnaires pour faciliter le traitement
-    factures_actuelles_dict = {row['type_facture']: row['montant_actuel'] for row in factures_actuelles}
-    factures_passees_dict = {row['type_facture']: row['montant_passe'] for row in factures_passees}
+        # Calcul des économies
+        economies = []
+        for type_facture in set(factures_actuelles.keys()).union(factures_passees.keys()):
+            montant_actuel = factures_actuelles.get(type_facture, 0)
+            montant_passe = factures_passees.get(type_facture, 0)
+            economie = montant_passe - montant_actuel
 
-    # Calcul des économies
-    economies = []
-    for type_facture in set(factures_actuelles_dict.keys()).union(factures_passees_dict.keys()):
-        montant_actuel = factures_actuelles_dict.get(type_facture, 0)
-        montant_passe = factures_passees_dict.get(type_facture, 0)
-        economie = montant_passe - montant_actuel
+            economies.append({
+                "type_facture": type_facture,
+                "montant_passe": montant_passe,
+                "montant_actuel": montant_actuel,
+                "economie": economie
+            })
 
-        economies.append({
-            "type_facture": type_facture,
-            "montant_actuel": montant_actuel,
-            "montant_passe": montant_passe,
-            "economie": economie
-        })
+        return economies
 
-    return economies
+    except sqlite3.Error as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    finally:
+        if conn:
+            conn.close()
 
 
 
