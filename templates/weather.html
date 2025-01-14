@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Prévisions météo</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='css/styles.css') }}">
+</head>
+<body>
+    <h1>Prévisions météo</h1>
+
+    <!-- Formulaire -->
+    <form action="/weather" method="get">
+        <label for="city">Ville :</label>
+        <input type="text" id="city" name="city" placeholder="Entrez une ville" required>
+        <br><br>
+        <label for="country">Pays :</label>
+        <input type="text" id="country" name="country" placeholder="Code pays (ex: FR)" required>
+        <br><br>
+        <button type="submit">Obtenir les prévisions</button>
+    </form>
+
+    <!-- Affichage des prévisions météo -->
+    {% if city and country %}
+        <h2>Prévisions météo pour {{ city }}, {{ country }}</h2>
+        {% if forecasts %}
+            <ul>
+                {% for forecast in forecasts %}
+                    <li>{{ forecast.date }} : {{ forecast.temp }}°C - {{ forecast.description }}</li>
+                {% endfor %}
+            </ul>
+        {% elif error_message %}
+            <p style="color: red;">{{ error_message }}</p>
+        {% else %}
+            <p>Aucune prévision trouvée.</p>
+        {% endif %}
+    {% endif %}
+</body>
+</html>

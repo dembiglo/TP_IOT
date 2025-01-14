@@ -3,6 +3,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates  # Configurer les templates Jinja2
 from fastapi import FastAPI, Request
 from fastapi.requests import Request
+import requests
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -181,60 +182,51 @@ def get_chart():
 
 #Exercice3
 
-# Route pour obtenir les prévisions météo sur 5 jours (1 point par jour)
+# Route pour afficher le formulaire
 @app.get("/weather", response_class=HTMLResponse)
-def get_weather(city: str = "Paris", country: str = "FR"):
-    try:
-        # Clé API OpenWeatherMap 
-        api_key = "48c11c288de9b8496be785465363b9f2"  
-        url = f"https://api.openweathermap.org/data/2.5/forecast?q={city},{country}&appid={api_key}&units=metric&lang=fr"
+def get_weather(request: Request, city: str = None, country: str = None):
+    forecasts = []  # Par défaut, aucune prévision n'est affichée
+    error_message = None
 
-        # Requête vers l'API OpenWeatherMap
-        response = requests.get(url)
-        if response.status_code != 200:
-            raise HTTPException(status_code=500, detail="Erreur lors de la récupération des données météo")
+    if city and country:
+        try:
+            # Clé API OpenWeatherMap
+            api_key = "48c11c288de9b8496be785465363b9f2"
+            url = f"https://api.openweathermap.org/data/2.5/forecast?q={city},{country}&appid={api_key}&units=metric&lang=fr"
 
-        # Récupération des données JSON
-        data = response.json()
+            # Requête vers l'API
+            response = requests.get(url)
+            if response.status_code != 200:
+                error_message = "Erreur : Impossible de récupérer les données météo. Vérifiez la ville et le pays."
+            else:
+                data = response.json()
 
-        # Regrouper les prévisions (1 par jour)
-        forecasts = []
-        last_date = ""
-        for forecast in data["list"]:
-            current_date = forecast["dt_txt"].split(" ")[0]  # Extraire la date (AAAA-MM-JJ)
-            if current_date != last_date:  # Prendre uniquement une prévision par jour
-                forecasts.append({
-                    "date": current_date,
-                    "temp": forecast["main"]["temp"],
-                    "description": forecast["weather"][0]["description"]
-                })
-                last_date = current_date  # Mettre à jour la dernière date ajoutée
-            if len(forecasts) == 5:  # Arrêter après 5 jours
-                break
+                # Filtrer les prévisions (1 par jour sur 5 jours)
+                last_date = ""
+                for forecast in data["list"]:
+                    current_date = forecast["dt_txt"].split(" ")[0]
+                    if current_date != last_date:
+                        forecasts.append({
+                            "date": current_date,
+                            "temp": forecast["main"]["temp"],
+                            "description": forecast["weather"][0]["description"]
+                        })
+                        last_date = current_date
+                    if len(forecasts) == 5:
+                        break
+        except Exception as e:
+            error_message = f"Erreur : {str(e)}"
 
-        # Génération du contenu HTML
-        html_content = f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>Prévisions météo sur 5 jours</title>
-        </head>
-        <body>
-            <h1>Prévisions météo pour {city}, {country}</h1>
-            <ul>
-        """
-        for forecast in forecasts:
-            html_content += f"<li>{forecast['date']}: {forecast['temp']}°C - {forecast['description']}</li>"
+    # Retourner la page HTML avec ou sans prévisions
+    return templates.TemplateResponse("weather.html", {
+        "request": request,
+        "city": city,
+        "country": country,
+        "forecasts": forecasts,
+        "error_message": error_message
+    })
 
-        html_content += """
-            </ul>
-        </body>
-        </html>
-        """
-        return HTMLResponse(content=html_content)
 
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Erreur : {str(e)}")
 
  
 app.add_middleware(
